@@ -7,6 +7,7 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.kusaidia.util.logging.bean.SimpleBean;
 import org.kusaidia.util.logging.bean.SimpleBeanSubclass;
+import org.springframework.aop.framework.Advised;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.test.context.ContextConfiguration;
@@ -19,13 +20,16 @@ import java.math.BigDecimal;
 @RunWith(SpringJUnit4ClassRunner.class)
 @ContextConfiguration(locations = {
         "/aop-context.xml",
+        "/application-context.xml",
         "/logger-test-context.xml"})
 @TestExecutionListeners(listeners = {DependencyInjectionTestExecutionListener.class})
 public class LoggingAspectTest {
 
     @Autowired
     @Qualifier("logger")
-    private MockLogger logger;
+    private Log logger;
+
+    private MockLogger mockLogger;
 
     @Autowired
     @Qualifier(value = "simpleBean")
@@ -35,10 +39,11 @@ public class LoggingAspectTest {
     private SimpleBeanSubclass simpleBeanSubclass;
 
     @Before
-    public void before() {
-        this.logger.setLogLevel(SimpleBean.class, LogLevel.TRACE);
-        this.logger.setLogLevel(SimpleBeanSubclass.class, LogLevel.TRACE);
-        this.logger.resetLoggers();
+    public void before() throws Exception {
+        this.mockLogger = (MockLogger) ((Advised) this.logger).getTargetSource().getTarget();
+        this.mockLogger.setLogLevel(SimpleBean.class, LogLevel.TRACE);
+        this.mockLogger.setLogLevel(SimpleBeanSubclass.class, LogLevel.TRACE);
+        this.mockLogger.resetLoggers();
     }
 
     @Test
@@ -46,11 +51,11 @@ public class LoggingAspectTest {
         simpleBean.setDateProperty(
                 DateUtils.parseDate("01/01/2010", new String[]{"dd/MM/yyyy"}));
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBean.class).size());
-        assertEquals(logger.getMessages(SimpleBean.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBean.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < setDateProperty > with params Fri Jan 01 00:00:00 AST 2010 ]");
-        assertEquals(logger.getMessages(SimpleBean.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < setDateProperty > ]");
     }
@@ -59,11 +64,11 @@ public class LoggingAspectTest {
     public void testSimpleBean_SetIntegerProperty() {
         simpleBean.setIntegerProperty(100);
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBean.class).size());
-        assertEquals(logger.getMessages(SimpleBean.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBean.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < setIntegerProperty > with params 100 ]");
-        assertEquals(logger.getMessages(SimpleBean.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < setIntegerProperty > ]");
     }
@@ -72,11 +77,11 @@ public class LoggingAspectTest {
     public void testSimpleBean_SetStringProperty() {
         simpleBean.setStringProperty("stringProperty");
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBean.class).size());
-        assertEquals(logger.getMessages(SimpleBean.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBean.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < setStringProperty > with params stringProperty ]");
-        assertEquals(logger.getMessages(SimpleBean.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < setStringProperty > ]");
     }
@@ -85,11 +90,11 @@ public class LoggingAspectTest {
     public void testSimpleBean_GetDateProperty() {
         simpleBean.getDateProperty();
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBean.class).size());
-        assertEquals(logger.getMessages(SimpleBean.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBean.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < getDateProperty > ]");
-        assertEquals(logger.getMessages(SimpleBean.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < getDateProperty > returning 1/1/10 12:00 AM ]");
     }
@@ -98,11 +103,11 @@ public class LoggingAspectTest {
     public void testSimpleBean_GetIntegerProperty() {
         simpleBean.getIntegerProperty();
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBean.class).size());
-        assertEquals(logger.getMessages(SimpleBean.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBean.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < getIntegerProperty > ]");
-        assertEquals(logger.getMessages(SimpleBean.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < getIntegerProperty > returning 100 ]");
     }
@@ -111,11 +116,11 @@ public class LoggingAspectTest {
     public void testSimpleBean_GetStringProperty() {
         simpleBean.getStringProperty();
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBean.class).size());
-        assertEquals(logger.getMessages(SimpleBean.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBean.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < getStringProperty > ]");
-        assertEquals(logger.getMessages(SimpleBean.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBean.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < getStringProperty > returning stringProperty ]");
     }
@@ -125,12 +130,12 @@ public class LoggingAspectTest {
         simpleBeanSubclass.setDateProperty(
                 DateUtils.parseDate("01/01/2010", new String[]{"dd/MM/yyyy"}));
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBeanSubclass.class).size());
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBeanSubclass.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < setDateProperty > with params Fri Jan 01 " +
                         "00:00:00 AST 2010 ]");
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < setDateProperty > ]");
     }
@@ -139,11 +144,11 @@ public class LoggingAspectTest {
     public void testSimpleBeanSubclass_SetDecimalProperty() {
         simpleBeanSubclass.setDecimalProperty(new BigDecimal("0.25"));
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBeanSubclass.class).size());
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBeanSubclass.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < setDecimalProperty > with params 0.25 ]");
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < setDecimalProperty > ]");
     }
@@ -152,11 +157,11 @@ public class LoggingAspectTest {
     public void testSimpleBeanSubclass_SetIntegerProperty() {
         simpleBeanSubclass.setIntegerProperty(100);
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBeanSubclass.class).size());
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBeanSubclass.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < setIntegerProperty > with params 100 ]");
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < setIntegerProperty > ]");
     }
@@ -165,11 +170,11 @@ public class LoggingAspectTest {
     public void testSimpleBeanSubclass_SetStringProperty() {
         simpleBeanSubclass.setStringProperty("stringProperty");
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBeanSubclass.class).size());
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBeanSubclass.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < setStringProperty > with params stringProperty ]");
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < setStringProperty > ]");
     }
@@ -178,11 +183,11 @@ public class LoggingAspectTest {
     public void testSimpleBeanSubclass_GetDateProperty() {
         simpleBeanSubclass.getDateProperty();
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBeanSubclass.class).size());
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBeanSubclass.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < getDateProperty > ]");
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < getDateProperty > returning 1/1/10 12:00 AM ]");
     }
@@ -191,11 +196,11 @@ public class LoggingAspectTest {
     public void testSimpleBeanSubclass_GetDecimalProperty() {
         simpleBeanSubclass.getDecimalProperty();
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBeanSubclass.class).size());
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBeanSubclass.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < getDecimalProperty > ]");
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < getDecimalProperty > returning 0.25 ]");
     }
@@ -204,11 +209,11 @@ public class LoggingAspectTest {
     public void testSimpleBeanSubclass_GetIntegerProperty() {
         simpleBeanSubclass.getIntegerProperty();
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBeanSubclass.class).size());
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBeanSubclass.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < getIntegerProperty > ]");
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < getIntegerProperty > returning 100 ]");
     }
@@ -217,11 +222,11 @@ public class LoggingAspectTest {
     public void testSimpleBeanSubclass_GetStringProperty() {
         simpleBeanSubclass.getStringProperty();
 
-        Assert.assertEquals(2, logger.getMessages(SimpleBeanSubclass.class).size());
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(0),
+        Assert.assertEquals(2, mockLogger.getMessages(SimpleBeanSubclass.class).size());
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(0),
                 LogLevel.TRACE,
                 "[ entering < getStringProperty > ]");
-        assertEquals(logger.getMessages(SimpleBeanSubclass.class).get(1),
+        assertEquals(mockLogger.getMessages(SimpleBeanSubclass.class).get(1),
                 LogLevel.TRACE,
                 "[ leaving < getStringProperty > returning stringProperty ]");
     }
