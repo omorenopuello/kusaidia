@@ -1,5 +1,7 @@
 package org.kusaidia.domain.entities;
 
+import org.apache.commons.lang.builder.ToStringBuilder;
+import org.apache.commons.lang.builder.ToStringStyle;
 import org.hibernate.annotations.ForeignKey;
 import org.hibernate.annotations.Parameter;
 import org.hibernate.annotations.Type;
@@ -7,14 +9,10 @@ import org.hibernate.annotations.TypeDef;
 import org.hibernate.envers.Audited;
 import org.hibernate.envers.NotAudited;
 import org.hibernate.envers.RelationTargetAuditMode;
+import org.hibernate.validator.constraints.Email;
 import org.hibernate.validator.constraints.NotEmpty;
-import org.jasypt.digest.StringDigester;
 import org.jasypt.hibernate4.type.EncryptedStringType;
-import org.kusaidia.util.logging.LogLevel;
-import org.kusaidia.util.logging.Loggable;
-import org.springframework.beans.factory.annotation.Autowire;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Configurable;
+import org.kusaidia.util.builder.ValidationAwareBuilder;
 
 import javax.persistence.Column;
 import javax.persistence.Entity;
@@ -25,10 +23,11 @@ import javax.persistence.ManyToMany;
 import javax.persistence.Table;
 import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
-import javax.persistence.Transient;
 import javax.persistence.UniqueConstraint;
 import javax.validation.constraints.NotNull;
+import java.util.Collections;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Set;
 
 /**
@@ -47,7 +46,6 @@ import java.util.Set;
         typeClass = EncryptedStringType.class,
         parameters = {@Parameter(name = "encryptorRegisteredName",
                 value = "strongHibernateStringEncryptor")})
-@Configurable(preConstruction = true, autowire = Autowire.BY_TYPE)
 public class User extends AbstractEntity {
     /**
      * the lenght of the {@code username} field in the database
@@ -61,17 +59,6 @@ public class User extends AbstractEntity {
      * the length of the {@code password} field in the database
      */
     public static final int PASSWORD_LENGTH = 100;
-    /**
-     * the {@linkplain StringDigester} used to create a digest from the
-     * specified plain test password
-     */
-    @Autowired
-    @Transient
-    private StringDigester digester;
-
-//    public void setDigester(StringDigester digester) {
-//        this.digester = digester;
-//    }
     /**
      * The {@linkplain Set} of {@linkplain Role} associated with this
      * {@linkplain User}
@@ -98,7 +85,7 @@ public class User extends AbstractEntity {
     /**
      * The email address for this {@linkplain User} persistent entity.
      */
-    @NotEmpty
+    @Email
     @Type(type = "encryptedString")
     @Column(name = "email", updatable = true, nullable = false,
             length = User.EMAIL_LENGTH)
@@ -112,7 +99,7 @@ public class User extends AbstractEntity {
     @Column(name = "last_activity", nullable = false, updatable = true,
             insertable = true)
     @Temporal(value = TemporalType.TIMESTAMP)
-    private Date lastActivity = new Date();
+    private Date lastActivity;
     /**
      * the password for this {@linkplain User}
      */
@@ -127,13 +114,210 @@ public class User extends AbstractEntity {
      */
     protected User(){}
 
-    public User(String username, String email, String password) {
-        this.userName = username;
-        this.email = email;
-        this.password = password;
+    /**
+     * Creates a new {@linkplain User} persistent entity based on the
+     * {@linkplain Builder} specified properties.
+     *
+     * @param b the {@linkplain Builder} used to build this new {@linkplain
+     * User}
+     */
+    private User(Builder b) {
+        this.userName = b.userName;
+        this.email = b.email;
+        this.lastActivity = new Date();
+        this.password = b.password;
+        this.roles = new HashSet<>(b.roles);
     }
 
-    @Loggable(LogLevel.DEBUG)
-    public String getUserName() {return userName;}
+    /**
+     * Returns an unmodifiable {@linkplain Set} of {@linkplain Role}
+     * associated with this {@linkplain User} persistent entity.
+     *
+     * @return an unmodifiable  {@linkplain Set} of {@linkplain Role}
+     * associated with this {@linkplain User} persistent entity.
+     */
+    public Set<Role> getRoles() {
+        return Collections.unmodifiableSet(this.roles);
+    }
+
+    /**
+     * Returns the user name for this {@linkplain User} persistent entity. This
+     * represents an unique key.
+     *
+     * @return the user name for this {@linkplain User} persistent entity. This
+     * represents an unique key.
+     */
+    public String getUserName() {
+        return userName;
+    }
+
+    /**
+     * Returns the email address for this {@linkplain User} persistent entity.
+     *
+     * @return the email address for this {@linkplain User} persistent entity.
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    /**
+     * Returns the last activity timestamp for this {@linkplain User}. This
+     * must be updated each time the {@linkplain User} logs in or the
+     * session times out.
+     *
+     * @return the last activity timestamp for this {@linkplain User}. This
+     * must be updated each time the {@linkplain User} logs in or the
+     * session times out.
+     */
+    public Date getLastActivity() {
+        return new Date(this.lastActivity.getTime());
+    }
+
+    /**
+     * Returns the password for this {@linkplain User} persistent entity.
+     *
+     * @return the password for this {@linkplain User} persistent entity.
+     */
+    public String getPassword() {
+        return password;
+    }
+
+    /**
+     * Returns a string representation of the object. In general, the
+     * {@code toString} method returns a string that
+     * "textually represents" this object. The result should
+     * be a concise but informative representation that is easy for a
+     * person to read.
+     * It is recommended that all subclasses override this method.
+     * <p/>
+     * The {@code toString} method for class {@code Object}
+     * returns a string consisting of the name of the class of which the
+     * object is an instance, the at-sign character `{@code @}', and
+     * the unsigned hexadecimal representation of the hash code of the
+     * object. In other words, this method returns a string equal to the
+     * value of:
+     * <blockquote>
+     * <pre>
+     * getClass().getName() + '@' + Integer.toHexString(hashCode())
+     * </pre></blockquote>
+     *
+     * @return a string representation of the object.
+     */
+    @Override
+    public String toString() {
+        return new ToStringBuilder(this, ToStringStyle.DEFAULT_STYLE)
+                .append("Username", this.userName)
+                .append("Password", this.password)
+                .append("Email", this.email)
+                .append("LastActivity", this.lastActivity).toString();
+    }
+
+    /**
+     * Implementation of the {@linkplain ValidationAwareBuilder} for
+     * {@linkplain User} objects.
+     *
+     * @author Angel L. Villalain Garcia
+     * @since 1.0.0
+     * @version 1.0.0
+     */
+    public static class Builder extends
+            ValidationAwareBuilder<User, Builder> {
+        /**
+         * The {@linkplain Set} of {@linkplain Role} associated with this
+         * {@linkplain User}
+         */
+        private Set<Role> roles;
+        /**
+         * The user name for this {@linkplain User} persistent entity. This
+         * represents an unique key.
+         */
+        private String userName;
+        /**
+         * The email address for this {@linkplain User} persistent entity.
+         */
+        private String email;
+        /**
+         * the password for this {@linkplain User}
+         */
+        private String password;
+
+        /**
+         * Sets the user name for this {@linkplain User} persistent entity.
+         * This represents an unique key.
+         *
+         * @param username the user name for this {@linkplain User}
+         *                 persistent entity. This represents an unique key.
+         * @return a reference to this {@linkplain Builder} for method
+         * chaining.
+         */
+        public Builder userName(String username){
+            this.userName = username;
+            return this;
+        }
+
+        /**
+         * Sets the email address for this {@linkplain User} persistent entity.
+         *
+         * @param email the email address for this {@linkplain User}
+         *              persistent entity.
+         * @return a reference to this {@linkplain Builder} for method
+         * chaining.
+         */
+        public Builder email(String email) {
+            this.email = email;
+            return this;
+        }
+
+        /**
+         * Sets the password for this {@linkplain User} persistent entity.
+         *
+         * @param password the password for this {@linkplain User} persistent
+         *                 entity.
+         * @return a reference to this {@linkplain Builder} for method
+         * chaining.
+         */
+        public Builder password(String password){
+            this.password = password;
+            return this;
+        }
+
+        /**
+         * Sets the {@linkplain Set} of {@linkplain Role} associated with this
+         * {@linkplain User} persistent entity.
+         *
+         * @param roles the {@linkplain Set} of {@linkplain Role} associated
+         *              with this {@linkplain User} persistent entity.
+         * @return a reference to this {@linkplain Builder} for method
+         * chaining.
+         */
+        public Builder roles(Set<Role> roles) {
+            this.roles = new HashSet<Role>(roles);
+            return this;
+        }
+
+        /**
+         * Adds a {@linkplain Role} to the {@linkplain Set} of {@linkplain
+         * Role} associated with this {@linkplain User} persistent entity.
+         *
+         * @param role the {@linkplain Role} to add.
+         * @return a reference to this {@linkplain Builder} for method
+         * chaining.
+         */
+        public Builder role(Role role) {
+            if(this.roles == null) {
+                this.roles = new HashSet<>();
+            }
+            this.roles.add(role);
+            return this;
+        }
+
+        /**
+         * @see ValidationAwareBuilder#buildInternal()
+         */
+        @Override
+        protected User buildInternal() {
+            return new User(this);
+        }
+    }
 
 }
