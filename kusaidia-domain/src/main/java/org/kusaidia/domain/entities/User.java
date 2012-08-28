@@ -1,3 +1,25 @@
+/*
+ * Kusaidia
+ *
+ * Copyright (c) 2012, third-party contributors as indicated by the
+ * @author tags or express copyright attribution statements applied by the authors.
+ *
+ * This copyrighted material is made available to anyone wishing to use, modify,
+ * copy, or redistribute it subject to the terms and conditions of the GNU
+ * Lesser General Public License, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of MERCHANTABILITY
+ * or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU Lesser General Public License
+ * for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with this distribution; if not, write to:
+ * Free Software Foundation, Inc.
+ * 51 Franklin Street, Fifth Floor
+ * Boston, MA  02110-1301  USA
+ */
+
 package org.kusaidia.domain.entities;
 
 import org.apache.commons.lang.builder.ToStringBuilder;
@@ -50,7 +72,7 @@ public class User extends AbstractEntity {
     /**
      * the lenght of the {@code username} field in the database
      */
-    public static final int USERNAME_LENGTH = 50;
+    public static final int USERNAME_LENGTH = 20;
     /**
      * the length of the {@code email} field in the database
      */
@@ -85,7 +107,10 @@ public class User extends AbstractEntity {
     /**
      * The email address for this {@linkplain User} persistent entity.
      */
-    @Email
+    @NotNull
+    @Email(regexp = "[a-z0-9!#$%&'*+/=?^_`{|}~-]+(?:" +
+            "\\.[a-z0-9!#$%&'*+/=?^_`{|}~-]+)*@(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.)+" +
+            "[a-z0-9](?:[a-z0-9-]*[a-z0-9])?")
     @Type(type = "encryptedString")
     @Column(name = "email", updatable = true, nullable = false,
             length = User.EMAIL_LENGTH)
@@ -139,6 +164,10 @@ public class User extends AbstractEntity {
     public Set<Role> getRoles() {
         return Collections.unmodifiableSet(this.roles);
     }
+
+//    public User addRole(Role role) {
+//
+//    }
 
     /**
      * Returns the user name for this {@linkplain User} persistent entity. This
@@ -226,7 +255,7 @@ public class User extends AbstractEntity {
          * The {@linkplain Set} of {@linkplain Role} associated with this
          * {@linkplain User}
          */
-        private Set<Role> roles;
+        private Set<Role> roles = new HashSet<Role>();
         /**
          * The user name for this {@linkplain User} persistent entity. This
          * represents an unique key.
@@ -291,7 +320,9 @@ public class User extends AbstractEntity {
          * chaining.
          */
         public Builder roles(Set<Role> roles) {
-            this.roles = new HashSet<Role>(roles);
+            if(roles != null) {
+                this.roles.addAll(roles);
+            }
             return this;
         }
 
@@ -304,10 +335,9 @@ public class User extends AbstractEntity {
          * chaining.
          */
         public Builder role(Role role) {
-            if(this.roles == null) {
-                this.roles = new HashSet<>();
+            if(role != null) {
+                this.roles.add(role);
             }
-            this.roles.add(role);
             return this;
         }
 
